@@ -1,5 +1,7 @@
-import * as THREE from './three.module.js'
+import './style.css'
+import * as THREE from 'three'
 import { OBJLoader } from './OBJLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 			let container;
 
@@ -11,6 +13,30 @@ import { OBJLoader } from './OBJLoader.js';
 			let windowHalfY = window.innerHeight / 2;
 
 			let object;
+
+
+
+
+
+// Sizes
+const sizes = {
+	width: 800,
+	height: 600
+}
+			
+// Cursor
+const cursor = {
+	x: 0,
+	y: 0
+}
+
+window.addEventListener('mousemove', (event) =>
+{
+	cursor.x = event.clientX / sizes.width - 0.5
+	cursor.y = - (event.clientY / sizes.height - 0.5)
+})
+
+
 
 			init();
 			animate();
@@ -61,7 +87,7 @@ import { OBJLoader } from './OBJLoader.js';
 				// texture
 
 				const textureLoader = new THREE.TextureLoader( manager );
-				const texture = textureLoader.load( '../textures/uv_grid_opengl.jpg' );
+				const texture = textureLoader.load( '../textures/male02.jpg' );
 
 				// model
 
@@ -79,7 +105,7 @@ import { OBJLoader } from './OBJLoader.js';
 				function onError() {}
 
 				const loader = new OBJLoader( manager );
-				loader.load( '../textures/WaltHead.obj', function ( obj ) {
+				loader.load( '../textures/male02.obj', function ( obj ) {
 
 					object = obj;
 
@@ -92,12 +118,35 @@ import { OBJLoader } from './OBJLoader.js';
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
 
-				document.addEventListener( 'mousemove', onDocumentMouseMove );
-
+				// document.addEventListener( 'mousemove', onDocumentMouseMove );
+				
 				//
 
 				window.addEventListener( 'resize', onWindowResize );
 
+
+
+// Controls
+const controls = new OrbitControls(camera, container)
+// controls.target.y = 2
+controls.enableDamping = true
+// Animate
+const clock = new THREE.Clock()
+const tick = () =>
+{
+    const elapsedTime = clock.getElapsedTime()
+
+    // Update controls
+    controls.update()
+
+    // Render
+    renderer.render(scene, camera)
+
+    // Call tick again on the next frame
+    window.requestAnimationFrame(tick)
+}
+
+				tick()
 			}
 
 			function onWindowResize() {
@@ -130,11 +179,16 @@ import { OBJLoader } from './OBJLoader.js';
 
 			function render() {
 
-				camera.position.x += ( mouseX - camera.position.x ) * .05;
-				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+				// camera.position.x += ( mouseX - camera.position.x ) * .05;
+				// camera.position.y += ( - mouseY - camera.position.y ) * .05;
 
 				camera.lookAt( scene.position );
 
 				renderer.render( scene, camera );
 
 			}
+
+
+
+
+
