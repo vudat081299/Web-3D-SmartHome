@@ -913,10 +913,43 @@ function prepareControls () {
 
 
 /** 
- * MARK: - Animations 
+ * MARK: - Event listeners 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareAnimations () {
+function prepareEventListeners () {
+  window.addEventListener('resize', () => {
+    // Update sizes
+    sizes.width = window.innerWidth
+    sizes.height = window.innerHeight
+
+    // Update camera
+    camera.aspect = sizes.width / sizes.height
+    camera.updateProjectionMatrix()
+
+    // Update renderer
+    renderer.setSize(sizes.width, sizes.height)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  })
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** 
+ * MARK: - Animations 
+ * - Priority: 4
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+ function prepareAnimations () {
   const clock = new THREE.Clock()
   let previousTime = 0
   const tick = () => {
@@ -942,25 +975,8 @@ function prepareAnimations () {
 }
 
 
-/** 
- * MARK: - Event listeners 
- * - Priority: 3
- * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareEventListeners () {
-  window.addEventListener('resize', () => {
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
 
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  })
-}
 
 
 
