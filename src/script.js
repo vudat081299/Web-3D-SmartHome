@@ -4,6 +4,7 @@ import * as THREE from 'three'
 // import { OBJLoader } from 'three/src/loaders/ObjectLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
+import gsap from 'gsap'
 
 // import * as THREE from '../build/three.module.js';
 import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
@@ -493,6 +494,7 @@ let floor
 let directionalLight
 let camera
 let controls
+let boxMesh
 
 /** MARK: - Canvas --------------------------------------------------------------------------------------------------------------------------------------- */
 const canvas = document.querySelector('canvas.webgl')
@@ -610,16 +612,35 @@ function prepareObjects () {
   // const sphereGeometry = new THREE.SphereGeometry( 5, 32, 32 );
   // const sphereMaterial = new THREE.MeshStandardMaterial( { color: 0xff0000 } );
   // const sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
-  // sphere.castShadow = true; //default is false
-  // sphere.receiveShadow = false; //default
+  // sphere.castShadow = true; // default is false
+  // sphere.receiveShadow = false; // default
   // scene.add( sphere );
 
   //Create a plane that receives shadows (but does not cast them)
-  const planeGeometry = new THREE.PlaneGeometry(20, 20, 32, 32);
-  const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-  plane.receiveShadow = true;
-  scene.add(plane);
+  // const planeGeometry = new THREE.PlaneGeometry(20, 20, 32, 32);
+  // const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+  // const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  // plane.receiveShadow = true;
+  // scene.add(plane);
+
+  const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
+  const boxmMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  boxMesh = new THREE.Mesh(boxGeometry, boxmMaterial)
+  scene.add(boxMesh)
+ 
+  boxMesh.position.set(2, 2, 0)
+
+  /**
+   * MARK: - Rotation 
+   * - Euler roration
+   * - Watch out: When rotate on an axis, might also rotate the other axis. The rotation goes by default in the x, y and z order and you can get strange result like an axis not working anymore. This is called gimbal lock.
+   * - Fix: 
+   * + method 1: Change this order by using the reoder() method ``` object.rotation.reoder('YXZ') ```. Do it before changing the rotation.
+   * + method 2 - high recommend: Use quaternion.
+   * --------------------------------------------------------------------------------------------------------------------------------------- */
+  boxMesh.rotation.reorder('YXZ')
+  boxMesh.rotation.x = Math.PI * 0.25
+
 }
 
 
@@ -656,8 +677,18 @@ function prepareLight () {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareCamera () {
   camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-  camera.position.set(0, 5, 20)
+  camera.position.set(0, 0, 4)
   scene.add(camera)
+}
+
+
+/** 
+ * MARK: - Axes helper
+ * - Priority: 2
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function prepareAxesHelper () {
+  const axesHelper = new THREE.AxesHelper(2)
+  scene.add(axesHelper)
 }
 
 
@@ -672,16 +703,11 @@ function prepareCamera () {
 
 
 
-
-
-
-
-
 /** 
- * MARK: - Helper 
+ * MARK: - Camera Helper for light
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareHelper () {
+function prepareCameraHelper () {
   //Create a helper for the shadow camera (optional)
   const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
   scene.add(helper);
@@ -744,6 +770,37 @@ function prepareEventListeners () {
 }
 
 
+/** 
+ * MARK: - Groups
+ * - Priority: 3
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function prepareGroups () {
+  const group = new THREE.Group()
+  scene.add(group)
+
+  // group.add(boxMesh)
+  const cube1 = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  )
+  cube1.position.x = -2
+  group.add(cube1)
+
+  const cube2 = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+  )
+  group.add(cube2)
+
+  const cube3 = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0x0000ff })
+  )
+  cube3.position.x = 2.0001
+  group.add(cube3)
+    group.position.y = 2
+}
+
 
 
 
@@ -760,7 +817,7 @@ function prepareEventListeners () {
  * MARK: - Animations 
  * - Priority: 4
  * --------------------------------------------------------------------------------------------------------------------------------------- */
- function prepareAnimations () {
+ function prepareAnimationsAndRender () {
   const clock = new THREE.Clock()
   let previousTime = 0
   const tick = () => {
@@ -776,16 +833,21 @@ function prepareEventListeners () {
     // Update controls
     controls.update()
 
-    // Render
+    
+    // camera.position.y = Math.sin(elapsedTime)
+    // camera.position.x = Math.cos(elapsedTime)
+    // camera.lookAt(boxMesh.position)
+
+    // Render - The lookAt() must call right before this method
     renderer.render(scene, camera)
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
+
+
   }
   tick()
 }
-
-
 
 
 
@@ -806,20 +868,22 @@ prepareScene()
 renderToCanvas()
 
 /** Priority: - 2 */
-prepareObjects()
 prepareCamera()
+prepareObjects()
 prepareLight()
 prepareFloor()
-prepareModels()
+// prepareModels()
+prepareAxesHelper()
 
 /** Priority: - 3 */
 prepareEventListeners()
 prepareControls()
-prepareShadow()
-prepareHelper()
+// prepareShadow()
+// prepareCameraHelper()
+// prepareGroups()
 
 /** Priority: - 4 */
-prepareAnimations()
+prepareAnimationsAndRender()
 
 
 
@@ -837,3 +901,8 @@ prepareAnimations()
 
 
 
+
+
+    // gsap.to(boxMesh.position, { duration: 1, delay: 1, x: 0 })
+    gsap.to(boxMesh.position, { duration: 1, delay: 2, x: 4 })
+    
