@@ -765,7 +765,7 @@ function prepareEventListeners () {
 
     // Update renderer
     renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRadtio(Math.min(window.devicePixelRatio, 2))
   })
 }
 
@@ -832,13 +832,12 @@ function prepareGroups () {
 
     // Update controls
     controls.update()
-
     
     // camera.position.y = Math.sin(elapsedTime)
     // camera.position.x = Math.cos(elapsedTime)
     // camera.lookAt(boxMesh.position)
 
-    // Render - The lookAt() must call right before this method
+    // Render - The lookAt() must call right before render()
     renderer.render(scene, camera)
 
     // Call tick again on the next frame
@@ -904,5 +903,5 @@ prepareAnimationsAndRender()
 
 
     // gsap.to(boxMesh.position, { duration: 1, delay: 1, x: 0 })
-    gsap.to(boxMesh.position, { duration: 1, delay: 2, x: 4 })
+    // gsap.to(boxMesh.position, { duration: 0.5, delay: 1, x: 4 })
     
