@@ -1,4 +1,4 @@
-body {
+/* body {
 	margin: 0;
 	background-color: #000;
 	color: #fff;
@@ -20,7 +20,7 @@ a:hover {
 button {
 	cursor: pointer;
 	text-transform: uppercase;
-}
+} */
 
 #info {
 	position: absolute;
@@ -37,9 +37,9 @@ button {
 	z-index: 1; /* TODO Solve this in HTML */
 }
 
-a, button, input, select {
+/* a, button, input, select {
 	pointer-events: auto;
-}
+} */
 
 .dg.ac {
 	-moz-user-select: none;
@@ -49,7 +49,7 @@ a, button, input, select {
 	z-index: 2 !important; /* TODO Solve this in HTML */
 }
 
-#overlay {
+/* #overlay {
 	position: absolute;
 	font-size: 16px;
 	z-index: 2;
@@ -81,7 +81,7 @@ a, button, input, select {
 	background-color: #f00;
 	margin-top: 20px;
 	padding: 10px;
-}
+} */
 
 
 
@@ -98,7 +98,7 @@ a, button, input, select {
 
 
 
-html, body {
+/* html, body {
   margin: 0;
   height: 100%;
 }
@@ -106,7 +106,14 @@ html, body {
   width: 100%;
   height: 100%;
   display: block;
-}
+} */
+
+
+
+
+
+
+
 
 
 

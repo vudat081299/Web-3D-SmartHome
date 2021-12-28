@@ -24,6 +24,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 //
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 
+// UI Debug 
 import * as dat from 'dat.gui'
 
 
@@ -63,7 +64,7 @@ let camera, scene, renderer;
 
               gltf.scene.traverse( function ( child ) {
 
-                if ( child.isMesh ) {
+                if ( childmesh ) {
 
                   roughnessMipmapper.generateMipmaps( child.material );
 
@@ -174,7 +175,7 @@ let camera, scene, renderer;
 
               gltf.scene.traverse( function ( child ) {
 
-                if ( child.isMesh ) {
+                if ( childmesh ) {
 
                   roughnessMipmapper.generateMipmaps( child.material );
 
@@ -285,7 +286,7 @@ let camera, scene, renderer;
 
               gltf.scene.traverse( function ( child ) {
 
-                if ( child.isMesh ) {
+                if ( childmesh ) {
 
                   roughnessMipmapper.generateMipmaps( child.material );
 
@@ -396,7 +397,7 @@ let camera, scene, renderer;
 
               gltf.scene.traverse( function ( child ) {
 
-                if ( child.isMesh ) {
+                if ( childmesh ) {
 
                   roughnessMipmapper.generateMipmaps( child.material );
 
@@ -483,18 +484,32 @@ let camera, scene, renderer;
 
 
 /** MARK: - Declaration --------------------------------------------------------------------------------------------------------------------------------------- */
-const delta = 0.001 // 
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight
-}
 let scene
 let renderer
 let floor
 let directionalLight
 let camera
 let controls
-let boxMesh
+let mesh
+let material
+
+const delta = 0.001 // solver overide block object on UI
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight
+}
+const cursor = {
+  x: 0,
+  y: 0
+}
+const parameters = { // user for UI debugger
+  color: 0xff0000,
+  spin: () => {
+    gsap.to(mesh.rotation, { duration: 1, y: mesh.rotation.y + 10 })
+  }
+}
+const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug 
+// gui.hide()
 
 /** MARK: - Canvas --------------------------------------------------------------------------------------------------------------------------------------- */
 const canvas = document.querySelector('canvas.webgl')
@@ -522,8 +537,9 @@ let mixer = null
  * - Priority: 1
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareScene() {
+  console.log("prepareScene");
   scene = new THREE.Scene()
-  scene.background = new THREE.Color('white');
+  scene.background = new THREE.Color('black');
 }
 
 
@@ -532,6 +548,7 @@ function prepareScene() {
  * - Priority: 1
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function renderToCanvas() {
+  console.log("renderToCanvas");
   renderer = new THREE.WebGLRenderer({
     canvas: canvas
   })
@@ -542,6 +559,35 @@ function renderToCanvas() {
 }
 
 
+/** 
+ * MARK: - Full screen switcher 
+ * - Priority: 1
+ * - Switch between full screen and normal screen
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function switchScreenState() {
+  // this version may work on many browser
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
+  if (!fullscreenElement) {
+    if (canvas.requestFullscreen) {
+    canvas.requestFullscreen()
+    } else if (canvas.webkitRequestFullscreen) {
+      canvas.webkitRequestFullscreen()
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen()
+    }
+  }
+
+  // this version won't work on Safari, need declare like above to work on Safari
+  // if (!document.fullscreenElement) {
+  //   canvas.requestFullscreen()
+  // } else {
+  //   document.exitFullscreen()
+  // }
+}
 
 
 
@@ -560,7 +606,8 @@ function renderToCanvas() {
  * MARK: - Models 
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareModels () {
+function prepareModels() {
+  console.log("prepareModels");
   const dracoLoader = new DRACOLoader()
   dracoLoader.setDecoderPath('../draco/')
 
@@ -587,13 +634,14 @@ function prepareModels () {
  * MARK: - Floor 
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareFloor () {
+function prepareFloor() {
+  console.log("prepareFloor");
   floor = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(10, 10),
     new THREE.MeshStandardMaterial({
-        color: '#ffffff',
-        metalness: 0,
-        roughness: 0.5
+      color: '#ffffff',
+      metalness: 0,
+      roughness: 0.5
     })
   )
   floor.receiveShadow = true
@@ -607,7 +655,8 @@ function prepareFloor () {
  * MARK: - Objects 
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareObjects () {
+function prepareObjects() {
+  console.log("prepareObjects");
   //Create a sphere that cast shadows (but does not receive them)
   // const sphereGeometry = new THREE.SphereGeometry( 5, 32, 32 );
   // const sphereMaterial = new THREE.MeshStandardMaterial( { color: 0xff0000 } );
@@ -623,12 +672,21 @@ function prepareObjects () {
   // plane.receiveShadow = true;
   // scene.add(plane);
 
-  const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
-  const boxmMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 })
-  boxMesh = new THREE.Mesh(boxGeometry, boxmMaterial)
-  scene.add(boxMesh)
- 
-  boxMesh.position.set(2, 2, 0)
+  // const boxGeometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2)
+  const geometry = new THREE.BufferGeometry()
+  const count = 500
+  const positionsArray = new Float32Array(count * 3 * 3)
+  for(let i = 0; i < count * 3 * 3; i++) {
+    positionsArray[i] = (Math.random() - 0.5) * 6
+  }
+  const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3)
+  geometry.setAttribute('position', positionsAttribute)
+
+  material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+  mesh = new THREE.Mesh(geometry, material)
+  scene.add(mesh)
+
+  mesh.position.set(0, 0, 0)
 
   /**
    * MARK: - Rotation 
@@ -638,8 +696,8 @@ function prepareObjects () {
    * + method 1: Change this order by using the reoder() method ``` object.rotation.reoder('YXZ') ```. Do it before changing the rotation.
    * + method 2 - high recommend: Use quaternion.
    * --------------------------------------------------------------------------------------------------------------------------------------- */
-  boxMesh.rotation.reorder('YXZ')
-  boxMesh.rotation.x = Math.PI * 0.25
+  // mesh.rotation.reorder('YXZ')
+  // mesh.rotation.x = Math.PI * 0.25
 
 }
 
@@ -648,7 +706,8 @@ function prepareObjects () {
  * MARK: - Lights 
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareLight () {
+function prepareLight() {
+  console.log("prepareLight");
   const ambientLight = new THREE.AmbientLight(0xffffff, 1)
   scene.add(ambientLight)
 
@@ -675,9 +734,10 @@ function prepareLight () {
  * MARK: - Camera 
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareCamera () {
+function prepareCamera() {
+  console.log("prepareCamera");
   camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-  camera.position.set(0, 0, 4)
+  camera.position.set(0, 0, 10)
   scene.add(camera)
 }
 
@@ -686,7 +746,8 @@ function prepareCamera () {
  * MARK: - Axes helper
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareAxesHelper () {
+function prepareAxesHelper() {
+  console.log("prepareAxesHelper");
   const axesHelper = new THREE.AxesHelper(2)
   scene.add(axesHelper)
 }
@@ -707,7 +768,8 @@ function prepareAxesHelper () {
  * MARK: - Camera Helper for light
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareCameraHelper () {
+function prepareCameraHelper() {
+  console.log("prepareCameraHelper");
   //Create a helper for the shadow camera (optional)
   const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
   scene.add(helper);
@@ -718,7 +780,8 @@ function prepareCameraHelper () {
  * MARK: - Shadow 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareShadow () {
+function prepareShadow() {
+  console.log("prepareShadow");
   /** MARK: - Textures --------------------------------------------------------------------------------------------------------------------------------------- */
   const textureLoader = new THREE.TextureLoader()
   const bakedShadow = textureLoader.load('/textures/bakedShadow.jpg')
@@ -742,10 +805,12 @@ function prepareShadow () {
  * MARK: - Controls 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareControls () {
+function prepareControls() {
+  console.log("prepareControls");
   controls = new OrbitControls(camera, canvas)
   controls.target.set(0, 0.75, 0)
-  controls.enableDamping = true
+  controls.enableDamping = true // set smooth for controls
+  controls.update()
 }
 
 
@@ -753,7 +818,15 @@ function prepareControls () {
  * MARK: - Event listeners 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareEventListeners () {
+function moveMouseListener() {
+  console.log("moveMouseListener");
+  window.addEventListener('mousemove', (event) => {
+    cursor.x = event.clientX / sizes.width - 0.5
+    cursor.y = - (event.clientY / sizes.height - 0.5)
+  })
+}
+function resizeListener() {
+  console.log("resizeListener");
   window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
@@ -761,11 +834,23 @@ function prepareEventListeners () {
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
+    camera.updateProjectionMatrix() // must call this after change aspect of camera
 
     // Update renderer
     renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRadtio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  })
+}
+function doubleClickListener() {
+  window.addEventListener('dblclick', () => {
+    // this event listener doesn't work on Safari
+    switchScreenState()
+  })
+}
+function prepareEventListeners(eventListeners) {
+  console.log("prepareEventListeners");
+  eventListeners.forEach(function (eventListener) {
+    eventListener()
   })
 }
 
@@ -774,11 +859,12 @@ function prepareEventListeners () {
  * MARK: - Groups
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function prepareGroups () {
+function prepareGroups() {
+  console.log("prepareGroups");
   const group = new THREE.Group()
   scene.add(group)
 
-  // group.add(boxMesh)
+  // group.add(mesh)
   const cube1 = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
     new THREE.MeshBasicMaterial({ color: 0xff0000 })
@@ -798,7 +884,7 @@ function prepareGroups () {
   )
   cube3.position.x = 2.0001
   group.add(cube3)
-    group.position.y = 2
+  group.position.y = 2
 }
 
 
@@ -817,7 +903,23 @@ function prepareGroups () {
  * MARK: - Animations 
  * - Priority: 4
  * --------------------------------------------------------------------------------------------------------------------------------------- */
- function prepareAnimationsAndRender () {
+function updateCameraOnTick() {
+  camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
+  camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
+  camera.position.y = - cursor.y * 5
+
+  // camera.position.y = Math.sin(elapsedTime)
+  // camera.position.x = Math.cos(elapsedTime)
+  camera.lookAt(mesh.position)
+}
+function updateControlOnTick() {
+  // prerequisites before call this method: call prepareControls() to initialize controls
+  if (controls != null) {
+    controls.update()
+  }
+}
+function prepareAnimationsAndRender(updateComponents) {
+  console.log("prepareAnimationsAndRender");
   const clock = new THREE.Clock()
   let previousTime = 0
   const tick = () => {
@@ -830,12 +932,10 @@ function prepareGroups () {
       mixer.update(deltaTime)
     }
 
-    // Update controls
-    controls.update()
-    
-    // camera.position.y = Math.sin(elapsedTime)
-    // camera.position.x = Math.cos(elapsedTime)
-    // camera.lookAt(boxMesh.position)
+    // Update
+    updateComponents.forEach(function (updateComponent) {
+      updateComponent()
+    })
 
     // Render - The lookAt() must call right before render()
     renderer.render(scene, camera)
@@ -859,6 +959,35 @@ function prepareGroups () {
 
 
 
+
+
+/** 
+ * MARK: - UI Debug 
+ * - Priority: 5
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function prepareUIDebugger() {
+  gui.add(mesh.position, 'y')
+    .min(-3)
+    .max(3)
+    .step(0.01)
+    .name('elevation')
+  gui.add(mesh, 'visible')
+  gui.add(material, 'wireframe')
+  gui.addColor(parameters, 'color')
+    .onChange(() => {
+      material.color.set(parameters.color)
+    })
+  gui.add(parameters, 'spin')
+}
+
+
+
+
+
+
+
+
+
 /** MARK: - Application --------------------------------------------------------------------------------------------------------------------------------------- */
 /** Priority: - 0*/
 
@@ -872,17 +1001,23 @@ prepareObjects()
 prepareLight()
 prepareFloor()
 // prepareModels()
-prepareAxesHelper()
+// prepareAxesHelper()
 
 /** Priority: - 3 */
-prepareEventListeners()
+let eventListenersList = [resizeListener, moveMouseListener, doubleClickListener]
+prepareEventListeners(eventListenersList)
+
 prepareControls()
 // prepareShadow()
 // prepareCameraHelper()
 // prepareGroups()
 
 /** Priority: - 4 */
-prepareAnimationsAndRender()
+let updateComponentsList = [updateControlOnTick]
+prepareAnimationsAndRender(updateComponentsList)
+
+/** Priority: - 5 */
+prepareUIDebugger()
 
 
 
@@ -897,11 +1032,6 @@ prepareAnimationsAndRender()
 
 
 
-
-
-
-
-
-    // gsap.to(boxMesh.position, { duration: 1, delay: 1, x: 0 })
-    // gsap.to(boxMesh.position, { duration: 0.5, delay: 1, x: 4 })
-    
+// Utilize methods
+// gsap.to(mesh.position, { duration: 1, delay: 1, x: 0 })
+// gsap.to(mesh.position, { duration: 0.5, delay: 1, x: 20 })
