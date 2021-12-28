@@ -502,14 +502,6 @@ const cursor = {
   x: 0,
   y: 0
 }
-const parameters = { // user for UI debugger
-  color: 0xff0000,
-  spin: () => {
-    gsap.to(mesh.rotation, { duration: 1, y: mesh.rotation.y + 10 })
-  }
-}
-const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug 
-// gui.hide()
 
 /** MARK: - Canvas --------------------------------------------------------------------------------------------------------------------------------------- */
 const canvas = document.querySelector('canvas.webgl')
@@ -519,7 +511,15 @@ const canvas = document.querySelector('canvas.webgl')
 let mixer = null
 
 
-
+/** MARK: - Debug helper --------------------------------------------------------------------------------------------------------------------------------------- */
+const parameters = { // user for UI debugger
+  color: 0xff0000,
+  spin: () => {
+    gsap.to(mesh.rotation, { duration: 1, y: mesh.rotation.y + 10 })
+  }
+}
+const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug 
+// gui.hide()
 
 
 
@@ -674,7 +674,7 @@ function prepareObjects() {
 
   // const boxGeometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2)
   const geometry = new THREE.BufferGeometry()
-  const count = 500
+  const count = 0
   const positionsArray = new Float32Array(count * 3 * 3)
   for(let i = 0; i < count * 3 * 3; i++) {
     positionsArray[i] = (Math.random() - 0.5) * 6
@@ -708,25 +708,85 @@ function prepareObjects() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareLight() {
   console.log("prepareLight");
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1)
+  // const ambientLight = new THREE.AmbientLight(0xffffff, 1)
+  // scene.add(ambientLight)
+
+  // // const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+  // // directionalLight.castShadow = true
+  // // directionalLight.shadow.mapSize.set(1024, 1024)
+  // // directionalLight.shadow.camera.far = 15
+  // // directionalLight.shadow.camera.left = - 7
+  // // directionalLight.shadow.camera.top = 7
+  // // directionalLight.shadow.camera.right = 7
+  // // directionalLight.shadow.camera.bottom = - 7
+  // // directionalLight.position.set(- 5, 5, 0)
+  // // scene.add(directionalLight)
+
+  // //Create a DirectionalLight and turn on shadows for the light
+  // directionalLight = new THREE.DirectionalLight(0xffffff, 1, 1);
+  // directionalLight.position.set(-1, -1, -1); //default; light shining from top
+  // directionalLight.castShadow = true; // default false
+  // scene.add(directionalLight);
+
+
+  // Ambient light
+  const ambientLight = new THREE.AmbientLight()
+  ambientLight.color = new THREE.Color(0xffffff)
+  ambientLight.intensity = 0.5
   scene.add(ambientLight)
 
-  // const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
-  // directionalLight.castShadow = true
-  // directionalLight.shadow.mapSize.set(1024, 1024)
-  // directionalLight.shadow.camera.far = 15
-  // directionalLight.shadow.camera.left = - 7
-  // directionalLight.shadow.camera.top = 7
-  // directionalLight.shadow.camera.right = 7
-  // directionalLight.shadow.camera.bottom = - 7
-  // directionalLight.position.set(- 5, 5, 0)
-  // scene.add(directionalLight)
+  // Directional light
+  const directionalLight = new THREE.DirectionalLight(0x00fffc, 0.3)
+  directionalLight.position.set(1, 0.25, 0)
+  scene.add(directionalLight)
 
-  //Create a DirectionalLight and turn on shadows for the light
-  directionalLight = new THREE.DirectionalLight(0xffffff, 1, 1);
-  directionalLight.position.set(-1, -1, -1); //default; light shining from top
-  directionalLight.castShadow = true; // default false
-  scene.add(directionalLight);
+  // Hemisphere light
+  const hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x0000ff, 0.3)
+  scene.add(hemisphereLight)
+
+  // Point light
+  const pointLight = new THREE.PointLight(0xff9000, 0.5, 10, 2)
+  pointLight.position.set(1, - 0.5, 1)
+  scene.add(pointLight)
+
+  // Rect area light
+  const rectAreaLight = new THREE.RectAreaLight(0x4e00ff, 2, 1, 1)
+  rectAreaLight.position.set(- 1.5, 0, 1.5)
+  rectAreaLight.lookAt(new THREE.Vector3())
+  scene.add(rectAreaLight)
+
+  // Spot light
+  const spotLight = new THREE.SpotLight(0x78ff00, 0.5, 10, Math.PI * 0.1, 0.25, 1)
+  spotLight.position.set(0, 2, 3)
+  scene.add(spotLight)
+
+  spotLight.target.position.x = - 0.75
+  scene.add(spotLight.target)
+
+  // Helpers
+  const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 0.2)
+  scene.add(hemisphereLightHelper)
+
+  const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 0.2)
+  scene.add(directionalLightHelper)
+
+  const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2)
+  scene.add(pointLightHelper)
+
+  const spotLightHelper = new THREE.SpotLightHelper(spotLight)
+  scene.add(spotLightHelper)
+  window.requestAnimationFrame(() => {
+    spotLightHelper.update()
+  })
+
+  const rectAreaLightHelper = new RectAreaLightHelper(rectAreaLight)
+  scene.add(rectAreaLightHelper)
+
+  window.requestAnimationFrame(() => {
+    rectAreaLightHelper.position.copy(rectAreaLight.position)
+    rectAreaLightHelper.quaternion.copy(rectAreaLight.quaternion)
+    // rectAreaLightHelper.update()
+  })
 }
 
 
