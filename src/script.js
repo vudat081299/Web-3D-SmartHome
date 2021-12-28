@@ -672,17 +672,17 @@ function prepareObjects() {
   // plane.receiveShadow = true;
   // scene.add(plane);
 
-  // const boxGeometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2)
-  const geometry = new THREE.BufferGeometry()
-  const count = 0
-  const positionsArray = new Float32Array(count * 3 * 3)
-  for(let i = 0; i < count * 3 * 3; i++) {
-    positionsArray[i] = (Math.random() - 0.5) * 6
-  }
-  const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3)
-  geometry.setAttribute('position', positionsAttribute)
+  const geometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2)
+  // const geometry = new THREE.BufferGeometry()
+  // const count = 0
+  // const positionsArray = new Float32Array(count * 3 * 3)
+  // for(let i = 0; i < count * 3 * 3; i++) {
+  //   positionsArray[i] = (Math.random() - 0.5) * 6
+  // }
+  // const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3)
+  // geometry.setAttribute('position', positionsAttribute)
 
-  material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+  material = new THREE.MeshBasicMaterial({ color: 0xff0000 }) // , wireframe: true })
   mesh = new THREE.Mesh(geometry, material)
   scene.add(mesh)
 
@@ -963,6 +963,7 @@ function prepareGroups() {
  * MARK: - Animations 
  * - Priority: 4
  * --------------------------------------------------------------------------------------------------------------------------------------- */
+const clock = new THREE.Clock()
 function updateCameraOnTick() {
   camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
   camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
@@ -980,7 +981,6 @@ function updateControlOnTick() {
 }
 function prepareAnimationsAndRender(updateComponents) {
   console.log("prepareAnimationsAndRender");
-  const clock = new THREE.Clock()
   let previousTime = 0
   const tick = () => {
     const elapsedTime = clock.getElapsedTime()
@@ -1086,6 +1086,135 @@ prepareUIDebugger()
 
 
 
+
+
+
+
+
+
+
+// support click
+/**
+let stats;
+let raycaster
+
+let INTERSECTED;
+let theta = 0;
+
+const pointer = new THREE.Vector2();
+const radius = 100;
+
+init();
+animate();
+
+function init() {
+
+  // container = document.createElement( 'div' );
+  document.body.appendChild( canvas );
+
+  const geometry = new THREE.BoxGeometry( 20, 20, 20 );
+
+  for ( let i = 0; i < 2000; i ++ ) {
+
+    const object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+
+    object.position.x = Math.random() * 800 - 400;
+    object.position.y = Math.random() * 800 - 400;
+    object.position.z = Math.random() * 800 - 400;
+
+    object.rotation.x = Math.random() * 2 * Math.PI;
+    object.rotation.y = Math.random() * 2 * Math.PI;
+    object.rotation.z = Math.random() * 2 * Math.PI;
+
+    object.scale.x = Math.random() + 0.5;
+    object.scale.y = Math.random() + 0.5;
+    object.scale.z = Math.random() + 0.5;
+
+    scene.add( object );
+
+  }
+
+  raycaster = new THREE.Raycaster();
+
+  // canvas.appendChild( renderer.domElement );
+
+  stats = new Stats();
+  canvas.appendChild( stats.dom );
+
+  document.addEventListener( 'click', onPointerMove );
+
+  //
+
+  window.addEventListener( 'resize', onWindowResize );
+
+}
+
+function onWindowResize() {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
+}
+
+function onPointerMove( event ) {
+
+  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+}
+
+//
+
+function animate() {
+
+  requestAnimationFrame( animate );
+
+  render();
+  stats.update();
+
+}
+
+function render() {
+  theta += 0.1;
+
+  camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+  camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+  // camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+  camera.lookAt( scene.position );
+
+  camera.updateMatrixWorld();
+
+  // find intersections
+
+  raycaster.setFromCamera( pointer, camera );
+
+  const intersects = raycaster.intersectObjects( scene.children, false );
+
+  if ( intersects.length > 0 ) {
+    if ( INTERSECTED != intersects[ 0 ].object ) {
+
+      // if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+      INTERSECTED = intersects[ 0 ].object;
+      INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+      INTERSECTED.material.emissive.setHex( 0xffffff );
+
+    }
+
+  } else {
+
+    if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+    INTERSECTED = null;
+
+  }
+
+  renderer.render( scene, camera );
+
+}
+*/
 
 
 
