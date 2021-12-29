@@ -487,27 +487,46 @@ let camera, scene, renderer;
 
 
 /** MARK: - Declaration --------------------------------------------------------------------------------------------------------------------------------------- */
-let scene, renderer, floor, directionalLight, camera, controls, mesh, material, elapsedTime, raycaster, controlType = 'orbit'
 
-const pointer = new THREE.Vector2()
+let raycaster, controls, controlType = 'orbit'
+let directionalLight, mesh, material
+
 const delta = 0.001 // solver overide block object on UI
+const canvas = document.querySelector('canvas.webgl')
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight
 }
+const frustumSize = 1000
 const cursor = {
   x: 0,
   y: 0
 }
-const frustumSize = 1000
 
+const pointer = new THREE.Vector2()
+const clock = new THREE.Clock()
+const scene = new THREE.Scene()
 
-/** MARK: - Canvas --------------------------------------------------------------------------------------------------------------------------------------- */
-const canvas = document.querySelector('canvas.webgl')
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, frustumSize)
+const elapsedTime = clock.getElapsedTime()
+const renderer = new THREE.WebGLRenderer({
+  canvas: canvas
+})
 
 
 /** MARK: - Actions --------------------------------------------------------------------------------------------------------------------------------------- */
 let mixer = null
+
+
+/** MARK: - Intersections --------------------------------------------------------------------------------------------------------------------------------------- */
+let INTERSECTED
+
+
+/** MARK: - Drag --------------------------------------------------------------------------------------------------------------------------------------- */
+let group;
+let enableSelection = false;
+
+const objects = [];
 
 
 /** MARK: - Debug helper --------------------------------------------------------------------------------------------------------------------------------------- */
@@ -521,20 +540,6 @@ const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug
 // gui.hide()
 
 
-/** MARK: - Intersections --------------------------------------------------------------------------------------------------------------------------------------- */
-let INTERSECTED
-
-
-/** MARK: - Drag --------------------------------------------------------------------------------------------------------------------------------------- */
-let container;
-let group;
-let enableSelection = false;
-
-const objects = [];
-
-
-
-
 
 
 
@@ -546,7 +551,6 @@ const objects = [];
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareScene() {
   console.log("prepareScene");
-  scene = new THREE.Scene()
   scene.background = new THREE.Color('black');
 }
 
@@ -557,9 +561,6 @@ function prepareScene() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function renderToCanvas() {
   console.log("renderToCanvas");
-  renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-  })
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.setSize(sizes.width, sizes.height)
@@ -577,7 +578,7 @@ function switchScreenState() {
   const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
   if (!fullscreenElement) {
     if (canvas.requestFullscreen) {
-    canvas.requestFullscreen()
+      canvas.requestFullscreen()
     } else if (canvas.webkitRequestFullscreen) {
       canvas.webkitRequestFullscreen()
     }
@@ -602,9 +603,9 @@ function switchScreenState() {
  * MARK: - Render action
  * - Priority: 1
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function render() {
-  renderer.render( scene, camera );
-}
+// function render() {
+//   renderer.render( scene, camera );
+// }
 
 
 
@@ -655,7 +656,7 @@ function prepareModels() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareFloor() {
   console.log("prepareFloor");
-  floor = new THREE.Mesh(
+  const floor = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(10, 10),
     new THREE.MeshStandardMaterial({
       color: '#ffffff',
@@ -726,7 +727,7 @@ function prepareObjects() {
  * MARK: - Intersections
  * - Priority: 2
  * --------------------------------------------------------------------------------------------------------------------------------------- */
- function prepareIntersections() {
+function prepareIntersections() {
   // container = document.createElement('div');
   // document.body.appendChild(container);
 
@@ -748,9 +749,9 @@ function prepareObjects() {
     object.scale.z = Math.random() + 0.5;
 
     scene.add(object);
-    
+
     // Support drag
-    objects.push( object );
+    objects.push(object);
   }
 
   raycaster = new THREE.Raycaster();
@@ -854,7 +855,6 @@ function prepareLight() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareCamera() {
   console.log("prepareCamera");
-  camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, frustumSize)
   camera.position.set(0, 0, 10)
   scene.add(camera)
 }
@@ -927,17 +927,12 @@ function prepareControls() {
     controls.target.set(0, 0.75, 0)
     controls.enableDamping = true // set smooth for controls
     controls.update()
-  
+
   } else if (controlType == 'drag') {
     console.log("prepare drag control");
     group = new THREE.Group();
     scene.add(group);
-
     controls = new DragControls([...objects], camera, renderer.domElement);
-    controls.addEventListener('drag', render);
-
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
   }
 }
 
@@ -946,11 +941,26 @@ function prepareControls() {
  * MARK: - Event listeners 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function onKeyDown(event) {
-  enableSelection = (event.keyCode === 16) ? true : false;
+function prepareEventListeners(eventListeners) {
+  console.log("prepareEventListeners");
+  eventListeners.forEach(function (eventListener) {
+    eventListener()
+  })
 }
-function onKeyUp() {
-  enableSelection = false;
+function keyDownListener() {
+  window.addEventListener('keydown', (event) => {
+    enableSelection = (event.key === 16) ? true : false;
+  })
+}
+function keyUpListener() {
+  window.addEventListener('keyup', (event) => {
+    enableSelection = false;
+  })
+}
+function dragListener() {
+  controls.addEventListener('drag', (event) => {
+    // renderer.render(scene, camera);
+  })
 }
 function moveMouseListener() {
   console.log("moveMouseListener");
@@ -983,8 +993,8 @@ function doubleClickListener() {
 }
 function clickListener() {
   document.addEventListener('click', (event) => {
-    pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
     // Support drag
     event.preventDefault();
@@ -1017,12 +1027,6 @@ function clickListener() {
       }
     }
   });
-}
-function prepareEventListeners(eventListeners) {
-  console.log("prepareEventListeners");
-  eventListeners.forEach(function (eventListener) {
-    eventListener()
-  })
 }
 
 
@@ -1075,7 +1079,32 @@ function prepareGroups() {
  * MARK: - Animations 
  * - Priority: 4
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-const clock = new THREE.Clock()
+function prepareAnimationsAndRender(updateComponents) {
+  console.log("prepareAnimationsAndRender");
+  let previousTime = 0
+  const tick = () => {
+    const deltaTime = elapsedTime - previousTime
+    previousTime = elapsedTime
+
+    // Model animation
+    if (mixer) {
+      mixer.update(deltaTime)
+    }
+
+    // Update
+    updateComponents.forEach(function (updateComponent) {
+      updateComponent()
+    })
+
+    // Render - The lookAt() must call right before render(), if have something change by time automatically, below function should be uncomment to render frame along time
+    renderer.render(scene, camera)
+
+    // Call tick again on the next frame
+    window.requestAnimationFrame(tick)
+
+  }
+  tick()
+}
 function updateCameraOnTick() {
   // camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
   // camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
@@ -1110,33 +1139,6 @@ function updateIntersectionsOnTick() {
     // if (INTERSECTED.material.emissive) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
     // INTERSECTED = null;
   }
-}
-function prepareAnimationsAndRender(updateComponents) {
-  console.log("prepareAnimationsAndRender");
-  let previousTime = 0
-  const tick = () => {
-    elapsedTime = clock.getElapsedTime()
-    const deltaTime = elapsedTime - previousTime
-    previousTime = elapsedTime
-
-    // Model animation
-    if (mixer) {
-      mixer.update(deltaTime)
-    }
-
-    // Update
-    updateComponents.forEach(function (updateComponent) {
-      updateComponent()
-    })
-
-    // Render - The lookAt() must call right before render()
-    renderer.render(scene, camera)
-
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
-
-  }
-  tick()
 }
 
 
@@ -1179,6 +1181,14 @@ function prepareUIDebugger() {
 
 
 
+
+
+
+
+
+
+
+
 /** MARK: - Application --------------------------------------------------------------------------------------------------------------------------------------- */
 /** Priority: - 0*/
 
@@ -1196,11 +1206,10 @@ prepareFloor()
 // prepareAxesHelper()
 
 /** Priority: - 3 */
-let eventListenersList = [resizeListener, moveMouseListener, clickListener]
-prepareEventListeners(eventListenersList)
-controlType = 'drag'
+// controlType = 'drag'
 prepareControls()
-
+let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, dragListener]
+prepareEventListeners(eventListenersList)
 // prepareShadow()
 // prepareCameraHelper()
 // prepareGroups()
