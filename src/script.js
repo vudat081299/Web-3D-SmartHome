@@ -2,7 +2,6 @@ import './style.css'
 import * as THREE from 'three'
 // import { OBJLoader } from './OBJLoader.js';
 // import { OBJLoader } from 'three/src/loaders/ObjectLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
 import gsap from 'gsap'
 
@@ -26,6 +25,10 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 
 // UI Debug 
 import * as dat from 'dat.gui'
+
+// Controls
+import { DragControls } from 'three/examples/jsm/controls/DragControls.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 
 // Render .obj file
@@ -484,15 +487,9 @@ let camera, scene, renderer;
 
 
 /** MARK: - Declaration --------------------------------------------------------------------------------------------------------------------------------------- */
-let scene
-let renderer
-let floor
-let directionalLight
-let camera
-let controls
-let mesh
-let material
+let scene, renderer, floor, directionalLight, camera, controls, mesh, material, elapsedTime, raycaster, controlType = 'orbit'
 
+const pointer = new THREE.Vector2()
 const delta = 0.001 // solver overide block object on UI
 const sizes = {
   width: window.innerWidth,
@@ -502,6 +499,8 @@ const cursor = {
   x: 0,
   y: 0
 }
+const frustumSize = 1000
+
 
 /** MARK: - Canvas --------------------------------------------------------------------------------------------------------------------------------------- */
 const canvas = document.querySelector('canvas.webgl')
@@ -522,7 +521,16 @@ const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug
 // gui.hide()
 
 
+/** MARK: - Intersections --------------------------------------------------------------------------------------------------------------------------------------- */
+let INTERSECTED
 
+
+/** MARK: - Drag --------------------------------------------------------------------------------------------------------------------------------------- */
+let container;
+let group;
+let enableSelection = false;
+
+const objects = [];
 
 
 
@@ -588,6 +596,17 @@ function switchScreenState() {
   //   document.exitFullscreen()
   // }
 }
+
+
+/** 
+ * MARK: - Render action
+ * - Priority: 1
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function render() {
+  renderer.render( scene, camera );
+}
+
+
 
 
 
@@ -682,11 +701,13 @@ function prepareObjects() {
   // const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3)
   // geometry.setAttribute('position', positionsAttribute)
 
-  material = new THREE.MeshBasicMaterial({ color: 0xff0000 }) // , wireframe: true })
+  material = new THREE.MeshLambertMaterial({ color: 0xff0000 }) // , wireframe: true })
   mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(0, 0, 0)
   scene.add(mesh)
 
-  mesh.position.set(0, 0, 0)
+  // Support drag
+  objects.push(mesh);
 
   /**
    * MARK: - Rotation 
@@ -698,7 +719,44 @@ function prepareObjects() {
    * --------------------------------------------------------------------------------------------------------------------------------------- */
   // mesh.rotation.reorder('YXZ')
   // mesh.rotation.x = Math.PI * 0.25
+}
 
+
+/** 
+ * MARK: - Intersections
+ * - Priority: 2
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+ function prepareIntersections() {
+  // container = document.createElement('div');
+  // document.body.appendChild(container);
+
+  const intersectionBoxGeometry = new THREE.BoxGeometry(20, 20, 20);
+
+  for (let i = 0; i < 100; i++) {
+    const object = new THREE.Mesh(intersectionBoxGeometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
+
+    object.position.x = Math.random() * 800 - 400;
+    object.position.y = Math.random() * 800 - 400;
+    object.position.z = Math.random() * 800 - 400;
+
+    // object.rotation.x = Math.random() * 2 * Math.PI;
+    // object.rotation.y = Math.random() * 2 * Math.PI;
+    // object.rotation.z = Math.random() * 2 * Math.PI;
+
+    object.scale.x = Math.random() + 0.5;
+    object.scale.y = Math.random() + 0.5;
+    object.scale.z = Math.random() + 0.5;
+
+    scene.add(object);
+    
+    // Support drag
+    objects.push( object );
+  }
+
+  raycaster = new THREE.Raycaster();
+  // canvas.appendChild(renderer.domElement);
+  // stats = new Stats();
+  // canvas.appendChild(stats.dom);
 }
 
 
@@ -796,7 +854,7 @@ function prepareLight() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareCamera() {
   console.log("prepareCamera");
-  camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
+  camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, frustumSize)
   camera.position.set(0, 0, 10)
   scene.add(camera)
 }
@@ -811,9 +869,6 @@ function prepareAxesHelper() {
   const axesHelper = new THREE.AxesHelper(2)
   scene.add(axesHelper)
 }
-
-
-
 
 
 
@@ -866,11 +921,24 @@ function prepareShadow() {
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareControls() {
-  console.log("prepareControls");
-  controls = new OrbitControls(camera, canvas)
-  controls.target.set(0, 0.75, 0)
-  controls.enableDamping = true // set smooth for controls
-  controls.update()
+  if (controlType == 'orbit') {
+    console.log("prepare orbit control");
+    controls = new OrbitControls(camera, canvas)
+    controls.target.set(0, 0.75, 0)
+    controls.enableDamping = true // set smooth for controls
+    controls.update()
+  
+  } else if (controlType == 'drag') {
+    console.log("prepare drag control");
+    group = new THREE.Group();
+    scene.add(group);
+
+    controls = new DragControls([...objects], camera, renderer.domElement);
+    controls.addEventListener('drag', render);
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+  }
 }
 
 
@@ -878,6 +946,12 @@ function prepareControls() {
  * MARK: - Event listeners 
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
+function onKeyDown(event) {
+  enableSelection = (event.keyCode === 16) ? true : false;
+}
+function onKeyUp() {
+  enableSelection = false;
+}
 function moveMouseListener() {
   console.log("moveMouseListener");
   window.addEventListener('mousemove', (event) => {
@@ -907,6 +981,43 @@ function doubleClickListener() {
     switchScreenState()
   })
 }
+function clickListener() {
+  document.addEventListener('click', (event) => {
+    pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    // Support drag
+    event.preventDefault();
+    if (enableSelection === true) {
+      const draggableObjects = controls.getObjects();
+      draggableObjects.length = 0;
+
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersections = raycaster.intersectObjects(objects, true);
+
+      if (intersections.length > 0) {
+        const object = intersections[0].object;
+        if (group.children.includes(object) === true) {
+          object.material.emissive.set(0x000000);
+          scene.attach(object);
+        } else {
+          object.material.emissive.set(0xaaaaaa);
+          group.attach(object);
+        }
+        controls.transformGroup = true;
+        draggableObjects.push(group);
+      }
+
+      if (group.children.length === 0) {
+        controls.transformGroup = false;
+        draggableObjects.push(...objects);
+      }
+    }
+  });
+}
 function prepareEventListeners(eventListeners) {
   console.log("prepareEventListeners");
   eventListeners.forEach(function (eventListener) {
@@ -922,7 +1033,6 @@ function prepareEventListeners(eventListeners) {
 function prepareGroups() {
   console.log("prepareGroups");
   const group = new THREE.Group()
-  scene.add(group)
 
   // group.add(mesh)
   const cube1 = new THREE.Mesh(
@@ -942,9 +1052,11 @@ function prepareGroups() {
     new THREE.BoxGeometry(1, 1, 1),
     new THREE.MeshBasicMaterial({ color: 0x0000ff })
   )
-  cube3.position.x = 2.0001
+  cube3.position.x = 2 + delta
   group.add(cube3)
+
   group.position.y = 2
+  scene.add(group)
 }
 
 
@@ -965,25 +1077,45 @@ function prepareGroups() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 const clock = new THREE.Clock()
 function updateCameraOnTick() {
-  camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
-  camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
-  camera.position.y = - cursor.y * 5
+  // camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
+  // camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
+  // camera.position.y = - cursor.y * 5
 
-  // camera.position.y = Math.sin(elapsedTime)
-  // camera.position.x = Math.cos(elapsedTime)
-  camera.lookAt(mesh.position)
+  // mesh.position.y = Math.sin(elapsedTime) * 10
+  // mesh.position.x = Math.cos(elapsedTime) * 10
+  // camera.lookAt(mesh.position)
 }
 function updateControlOnTick() {
   // prerequisites before call this method: call prepareControls() to initialize controls
-  if (controls != null) {
+  if (controlType == 'orbit' && controls != null) {
     controls.update()
+  }
+}
+function updateIntersectionsOnTick() {
+  // find intersections
+  raycaster.setFromCamera(pointer, camera);
+
+  const intersects = raycaster.intersectObjects(scene.children, false);
+  // console.log(intersects.length);
+  if (intersects.length > 0) {
+    if (INTERSECTED != intersects[0].object) {
+      // if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+      INTERSECTED = intersects[0].object;
+      if (INTERSECTED.material.emissive) {
+        // INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+        INTERSECTED.material.emissive.setHex(0xffaaaa);
+      }
+    }
+  } else {
+    // if (INTERSECTED.material.emissive) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+    // INTERSECTED = null;
   }
 }
 function prepareAnimationsAndRender(updateComponents) {
   console.log("prepareAnimationsAndRender");
   let previousTime = 0
   const tick = () => {
-    const elapsedTime = clock.getElapsedTime()
+    elapsedTime = clock.getElapsedTime()
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
 
@@ -1002,7 +1134,6 @@ function prepareAnimationsAndRender(updateComponents) {
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
-
 
   }
   tick()
@@ -1058,22 +1189,24 @@ renderToCanvas()
 /** Priority: - 2 */
 prepareCamera()
 prepareObjects()
+prepareIntersections()
 prepareLight()
 prepareFloor()
 // prepareModels()
 // prepareAxesHelper()
 
 /** Priority: - 3 */
-let eventListenersList = [resizeListener, moveMouseListener, doubleClickListener]
+let eventListenersList = [resizeListener, moveMouseListener, clickListener]
 prepareEventListeners(eventListenersList)
-
+controlType = 'drag'
 prepareControls()
+
 // prepareShadow()
 // prepareCameraHelper()
 // prepareGroups()
 
 /** Priority: - 4 */
-let updateComponentsList = [updateControlOnTick]
+let updateComponentsList = [updateControlOnTick, updateCameraOnTick, updateIntersectionsOnTick]
 prepareAnimationsAndRender(updateComponentsList)
 
 /** Priority: - 5 */
@@ -1083,138 +1216,6 @@ prepareUIDebugger()
 
 
 
-
-
-
-
-
-
-
-
-
-
-// support click
-/**
-let stats;
-let raycaster
-
-let INTERSECTED;
-let theta = 0;
-
-const pointer = new THREE.Vector2();
-const radius = 100;
-
-init();
-animate();
-
-function init() {
-
-  // container = document.createElement( 'div' );
-  document.body.appendChild( canvas );
-
-  const geometry = new THREE.BoxGeometry( 20, 20, 20 );
-
-  for ( let i = 0; i < 2000; i ++ ) {
-
-    const object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
-
-    object.position.x = Math.random() * 800 - 400;
-    object.position.y = Math.random() * 800 - 400;
-    object.position.z = Math.random() * 800 - 400;
-
-    object.rotation.x = Math.random() * 2 * Math.PI;
-    object.rotation.y = Math.random() * 2 * Math.PI;
-    object.rotation.z = Math.random() * 2 * Math.PI;
-
-    object.scale.x = Math.random() + 0.5;
-    object.scale.y = Math.random() + 0.5;
-    object.scale.z = Math.random() + 0.5;
-
-    scene.add( object );
-
-  }
-
-  raycaster = new THREE.Raycaster();
-
-  // canvas.appendChild( renderer.domElement );
-
-  stats = new Stats();
-  canvas.appendChild( stats.dom );
-
-  document.addEventListener( 'click', onPointerMove );
-
-  //
-
-  window.addEventListener( 'resize', onWindowResize );
-
-}
-
-function onWindowResize() {
-
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
-
-}
-
-function onPointerMove( event ) {
-
-  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
-}
-
-//
-
-function animate() {
-
-  requestAnimationFrame( animate );
-
-  render();
-  stats.update();
-
-}
-
-function render() {
-  theta += 0.1;
-
-  camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
-  camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
-  // camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
-  camera.lookAt( scene.position );
-
-  camera.updateMatrixWorld();
-
-  // find intersections
-
-  raycaster.setFromCamera( pointer, camera );
-
-  const intersects = raycaster.intersectObjects( scene.children, false );
-
-  if ( intersects.length > 0 ) {
-    if ( INTERSECTED != intersects[ 0 ].object ) {
-
-      // if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
-
-      INTERSECTED = intersects[ 0 ].object;
-      INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-      INTERSECTED.material.emissive.setHex( 0xffffff );
-
-    }
-
-  } else {
-
-    if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
-
-    INTERSECTED = null;
-
-  }
-
-  renderer.render( scene, camera );
-
-}
-*/
 
 
 
