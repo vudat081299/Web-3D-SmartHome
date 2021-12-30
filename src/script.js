@@ -1,5 +1,10 @@
+//
+import 'bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import './style.css'
+
 import * as THREE from 'three'
+
 // import { OBJLoader } from './OBJLoader.js';
 // import { OBJLoader } from 'three/src/loaders/ObjectLoader.js';
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
@@ -493,21 +498,22 @@ let directionalLight, mesh, material
 
 const delta = 0.001 // solver overide block object on UI
 const canvas = document.querySelector('canvas.webgl')
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight
+// const sizes = {
+//   width: window.innerWidth - 300,
+//   height: window.innerHeight
+// }
+const frustumSize = 5000
+const sizes = () => {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
 }
-const frustumSize = 1000
-const cursor = {
-  x: 0,
-  y: 0
-}
-
 const pointer = new THREE.Vector2()
 const clock = new THREE.Clock()
 const scene = new THREE.Scene()
 
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, frustumSize)
+const camera = new THREE.PerspectiveCamera(75, sizes().width / sizes().height, 0.1, frustumSize)
 const elapsedTime = clock.getElapsedTime()
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas
@@ -519,12 +525,13 @@ let mixer = null
 
 
 /** MARK: - Intersections --------------------------------------------------------------------------------------------------------------------------------------- */
-let INTERSECTED
+let INTERSECTED;
+let enableIntersectionsSelection = false; // flag
 
 
 /** MARK: - Drag --------------------------------------------------------------------------------------------------------------------------------------- */
 let group;
-let enableSelection = false;
+let enableSelection = false; //  flag
 
 const objects = [];
 
@@ -551,7 +558,7 @@ const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareScene() {
   console.log("prepareScene");
-  scene.background = new THREE.Color('black');
+  scene.background = new THREE.Color('white');
 }
 
 
@@ -563,7 +570,7 @@ function renderToCanvas() {
   console.log("renderToCanvas");
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
-  renderer.setSize(sizes.width, sizes.height)
+  renderer.setSize(sizes().width, sizes().height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 }
 
@@ -733,8 +740,8 @@ function prepareIntersections() {
 
   const intersectionBoxGeometry = new THREE.BoxGeometry(20, 20, 20);
 
-  for (let i = 0; i < 100; i++) {
-    const object = new THREE.Mesh(intersectionBoxGeometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
+  for (let i = 0; i < 1000; i++) {
+    const object = new THREE.Mesh(intersectionBoxGeometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0x000001 + 0x5dbefe }));
 
     object.position.x = Math.random() * 800 - 400;
     object.position.y = Math.random() * 800 - 400;
@@ -921,19 +928,35 @@ function prepareShadow() {
  * - Priority: 3
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareControls() {
+  if (controls != null) controls.dispose()
+  controls = null
+  if (group != null) group.removeFromParent()
   if (controlType == 'orbit') {
     console.log("prepare orbit control");
     controls = new OrbitControls(camera, canvas)
     controls.target.set(0, 0.75, 0)
     controls.enableDamping = true // set smooth for controls
     controls.update()
-
   } else if (controlType == 'drag') {
     console.log("prepare drag control");
     group = new THREE.Group();
     scene.add(group);
     controls = new DragControls([...objects], camera, renderer.domElement);
   }
+}
+
+
+/** 
+ * MARK: - Switch controls 
+ * - Priority: 3
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function switchControl() {
+  if (controlType == 'drag') {
+    controlType = 'orbit'
+  } else if (controlType == 'orbit') {
+    controlType = 'drag'
+  }
+  prepareControls()
 }
 
 
@@ -955,46 +978,50 @@ function keyDownListener() {
 function keyUpListener() {
   window.addEventListener('keyup', (event) => {
     enableSelection = false;
+    
+    if (event.code === 'Space') {
+      switchControl()
+    }
   })
 }
-function dragListener() {
-  controls.addEventListener('drag', (event) => {
-    // renderer.render(scene, camera);
+function mouseDownListener() {
+  window.addEventListener('mousedown', (event) => {
+    enableIntersectionsSelection = true
+  })
+}
+function mouseUpListener() {
+  window.addEventListener('mouseup', (event) => {
   })
 }
 function moveMouseListener() {
   console.log("moveMouseListener");
   window.addEventListener('mousemove', (event) => {
-    cursor.x = event.clientX / sizes.width - 0.5
-    cursor.y = - (event.clientY / sizes.height - 0.5)
+    enableIntersectionsSelection = false
+
+    pointer.x = (event.clientX / sizes().width) * 2 - 1;
+    pointer.y = - (event.clientY / sizes().height) * 2 + 1;
   })
 }
 function resizeListener() {
   console.log("resizeListener");
-  window.addEventListener('resize', () => {
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
-
+  window.addEventListener('resize', (event) => {
     // Update camera
-    camera.aspect = sizes.width / sizes.height
+    camera.aspect = sizes().width / sizes().height
     camera.updateProjectionMatrix() // must call this after change aspect of camera
 
     // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
+    renderer.setSize(sizes().width, sizes().height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   })
 }
 function doubleClickListener() {
-  window.addEventListener('dblclick', () => {
+  window.addEventListener('dblclick', (event) => {
     // this event listener doesn't work on Safari
     switchScreenState()
   })
 }
 function clickListener() {
   document.addEventListener('click', (event) => {
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
     // Support drag
     event.preventDefault();
@@ -1002,10 +1029,7 @@ function clickListener() {
       const draggableObjects = controls.getObjects();
       draggableObjects.length = 0;
 
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
+      raycaster.setFromCamera(pointer, camera);
       const intersections = raycaster.intersectObjects(objects, true);
 
       if (intersections.length > 0) {
@@ -1014,7 +1038,7 @@ function clickListener() {
           object.material.emissive.set(0x000000);
           scene.attach(object);
         } else {
-          object.material.emissive.set(0xaaaaaa);
+          object.material.emissive.set(0x666666);
           group.attach(object);
         }
         controls.transformGroup = true;
@@ -1106,9 +1130,9 @@ function prepareAnimationsAndRender(updateComponents) {
   tick()
 }
 function updateCameraOnTick() {
-  // camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 10
-  // camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 10
-  // camera.position.y = - cursor.y * 5
+  // camera.position.x = Math.sin(pointer.x * Math.PI * 2) * 10
+  // camera.position.z = Math.cos(pointer.x * Math.PI * 2) * 10
+  // camera.position.y = - pointer.y * 5
 
   // mesh.position.y = Math.sin(elapsedTime) * 10
   // mesh.position.x = Math.cos(elapsedTime) * 10
@@ -1116,28 +1140,32 @@ function updateCameraOnTick() {
 }
 function updateControlOnTick() {
   // prerequisites before call this method: call prepareControls() to initialize controls
-  if (controlType == 'orbit' && controls != null) {
-    controls.update()
-  }
+
+  // if (controlType == 'orbit' && controls != null) {
+  //   controls.update()
+  // }
 }
 function updateIntersectionsOnTick() {
-  // find intersections
-  raycaster.setFromCamera(pointer, camera);
+  if (enableIntersectionsSelection) {
+    // find intersections
+    raycaster.setFromCamera(pointer, camera);
 
-  const intersects = raycaster.intersectObjects(scene.children, false);
-  // console.log(intersects.length);
-  if (intersects.length > 0) {
-    if (INTERSECTED != intersects[0].object) {
-      // if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
-      INTERSECTED = intersects[0].object;
-      if (INTERSECTED.material.emissive) {
-        // INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-        INTERSECTED.material.emissive.setHex(0xffaaaa);
+    const intersects = raycaster.intersectObjects(scene.children, false);
+    // console.log(intersects.length);
+    if (intersects.length > 0) {
+      if (intersects[0].object != null && INTERSECTED != intersects[0].object) {
+        // if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+        INTERSECTED = intersects[0].object;
+        if (INTERSECTED.material.emissive) {
+          // INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+          INTERSECTED.material.emissive.setHex(0x666666);
+        }
+        enableIntersectionsSelection = false;
       }
+    } else {
+      // if (INTERSECTED.material.emissive) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+      // INTERSECTED = null;
     }
-  } else {
-    // if (INTERSECTED.material.emissive) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
-    // INTERSECTED = null;
   }
 }
 
@@ -1208,7 +1236,7 @@ prepareFloor()
 /** Priority: - 3 */
 // controlType = 'drag'
 prepareControls()
-let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, dragListener]
+let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, doubleClickListener, mouseDownListener, mouseUpListener]
 prepareEventListeners(eventListenersList)
 // prepareShadow()
 // prepareCameraHelper()
