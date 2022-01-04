@@ -1143,9 +1143,9 @@ function updateCameraOnTick() {
 function updateControlOnTick() {
   // prerequisites before call this method: call prepareControls() to initialize controls
 
-  // if (controlType == 'orbit' && controls != null) {
-  //   controls.update()
-  // }
+  if (controlType == 'orbit' && controls != null) {
+    controls.update()
+  }
 }
 function updateStatsOnTick() {
   stats.update();
