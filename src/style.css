@@ -129,11 +129,12 @@ html,
 body
 {
     overflow: hidden;
+    min-height: 100vh;
 }
 
 .webgl
 {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 300;
     outline: none;
@@ -144,14 +145,7 @@ a {
 
 
 
-/* body {
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-} */
 
-/* html {
-  height: -webkit-fill-available;
-} */
 
 main {
   display: flex;
@@ -165,7 +159,7 @@ main {
 
 .b-example-divider {
   flex-shrink: 0;
-  width: 0.5rem;
+  width: 1.5rem;
   height: 100vh;
   background-color: rgba(0, 0, 0, .1);
   border: solid rgba(0, 0, 0, .15);

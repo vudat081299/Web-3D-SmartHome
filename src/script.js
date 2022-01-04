@@ -1,14 +1,14 @@
 //
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './style.css'
+import './style.css';
 
-import * as THREE from 'three'
+import * as THREE from 'three';
 
 // import { OBJLoader } from './OBJLoader.js';
 // import { OBJLoader } from 'three/src/loaders/ObjectLoader.js';
-import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
-import gsap from 'gsap'
+import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js';
+import gsap from 'gsap';
 
 // import * as THREE from '../build/three.module.js';
 import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
@@ -24,16 +24,14 @@ import { LoadingManager } from 'three/build/three.module';
 //
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
-//
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 // UI Debug 
-import * as dat from 'dat.gui'
+import * as dat from 'dat.gui';
 
 // Controls
 import { DragControls } from 'three/examples/jsm/controls/DragControls.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 
 // Render .obj file
@@ -492,7 +490,6 @@ let camera, scene, renderer;
 
 
 /** MARK: - Declaration --------------------------------------------------------------------------------------------------------------------------------------- */
-
 let raycaster, controls, controlType = 'orbit'
 let directionalLight, mesh, material
 
@@ -514,7 +511,6 @@ const clock = new THREE.Clock()
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(75, sizes().width / sizes().height, 0.1, frustumSize)
-const elapsedTime = clock.getElapsedTime()
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas
 })
@@ -543,8 +539,9 @@ const parameters = { // user for UI debugger
     gsap.to(mesh.rotation, { duration: 1, y: mesh.rotation.y + 10 })
   }
 }
-const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug 
+const gui = new dat.GUI({ closed: true, width: 300 }) // UI Debug 
 // gui.hide()
+const stats = new Stats(); // a performance viewer
 
 
 
@@ -558,7 +555,7 @@ const gui = new dat.GUI({ closed: true, width: 400 }) // UI Debug
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareScene() {
   console.log("prepareScene");
-  scene.background = new THREE.Color('white');
+  scene.background = new THREE.Color('black');
 }
 
 
@@ -566,7 +563,7 @@ function prepareScene() {
  * MARK: - Renderer 
  * - Priority: 1
  * --------------------------------------------------------------------------------------------------------------------------------------- */
-function renderToCanvas() {
+function prepareCanvas() {
   console.log("renderToCanvas");
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -615,6 +612,16 @@ function switchScreenState() {
 // }
 
 
+/** 
+ * MARK: - Prepare stats
+ * - Priority: 1
+ * - a performance viewer
+ * --------------------------------------------------------------------------------------------------------------------------------------- */
+function prepareStats() {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  container.appendChild(stats.dom);
+}
 
 
 
@@ -635,25 +642,22 @@ function switchScreenState() {
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareModels() {
   console.log("prepareModels");
-  const dracoLoader = new DRACOLoader()
-  dracoLoader.setDecoderPath('../draco/')
 
+  // const dracoLoader = new DRACOLoader()
+  // dracoLoader.setDecoderPath('../draco/')
   const gltfLoader = new GLTFLoader()
   // gltfLoader.setDRACOLoader(dracoLoader)
 
-  // '../models/Fox/glTF/Fox.gltf',
-  gltfLoader.load(
-    '../textures/scene.gltf',
-    (gltf) => {
-      gltf.scene.scale.set(0.001, 0.001, 0.001)
-      scene.add(gltf.scene)
+  // ../models/Fox/glTF/Fox.gltf
+  gltfLoader.load('../textures/house.gltf', (gltf) => {
+    gltf.scene.scale.set(1, 1, 1)
+    scene.add(gltf.scene)
 
-      // Animation
-      // mixer = new THREE.AnimationMixer(gltf.scene)
-      // const action = mixer.clipAction(gltf.animations[2])
-      // action.play()
-    }
-  )
+    // Animation - The block of code below load the animation of .gltf extension, this should be comment if the file was extracted without any animations.
+    // mixer = new THREE.AnimationMixer(gltf.scene)
+    // const action = mixer.clipAction(gltf.animations[2])
+    // action.play()
+  })
 }
 
 
@@ -740,7 +744,7 @@ function prepareIntersections() {
 
   const intersectionBoxGeometry = new THREE.BoxGeometry(20, 20, 20);
 
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 10; i++) {
     const object = new THREE.Mesh(intersectionBoxGeometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0x000001 + 0x5dbefe }));
 
     object.position.x = Math.random() * 800 - 400;
@@ -763,8 +767,6 @@ function prepareIntersections() {
 
   raycaster = new THREE.Raycaster();
   // canvas.appendChild(renderer.domElement);
-  // stats = new Stats();
-  // canvas.appendChild(stats.dom);
 }
 
 
@@ -802,28 +804,28 @@ function prepareLight() {
   scene.add(ambientLight)
 
   // Directional light
-  const directionalLight = new THREE.DirectionalLight(0x00fffc, 0.3)
-  directionalLight.position.set(1, 0.25, 0)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
+  directionalLight.position.set(30, 50, 100)
   scene.add(directionalLight)
 
   // Hemisphere light
-  const hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x0000ff, 0.3)
+  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.3)
   scene.add(hemisphereLight)
 
   // Point light
-  const pointLight = new THREE.PointLight(0xff9000, 0.5, 10, 2)
-  pointLight.position.set(1, - 0.5, 1)
+  const pointLight = new THREE.PointLight(0xffffff, 0.5, 10, 2)
+  pointLight.position.set(40, 50, 100)
   scene.add(pointLight)
 
   // Rect area light
-  const rectAreaLight = new THREE.RectAreaLight(0x4e00ff, 2, 1, 1)
-  rectAreaLight.position.set(- 1.5, 0, 1.5)
+  const rectAreaLight = new THREE.RectAreaLight(0xffffff, 2, 1, 1)
+  rectAreaLight.position.set(50, 50, 100)
   rectAreaLight.lookAt(new THREE.Vector3())
   scene.add(rectAreaLight)
 
   // Spot light
-  const spotLight = new THREE.SpotLight(0x78ff00, 0.5, 10, Math.PI * 0.1, 0.25, 1)
-  spotLight.position.set(0, 2, 3)
+  const spotLight = new THREE.SpotLight(0xffffff, 0.5, 10, Math.PI * 0.1, 0.25, 1)
+  spotLight.position.set(60, 50, 100)
   scene.add(spotLight)
 
   spotLight.target.position.x = - 0.75
@@ -1107,6 +1109,7 @@ function prepareAnimationsAndRender(updateComponents) {
   console.log("prepareAnimationsAndRender");
   let previousTime = 0
   const tick = () => {
+    const elapsedTime = clock.getElapsedTime() // elapsedTime must be updated on every tick
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
 
@@ -1125,7 +1128,6 @@ function prepareAnimationsAndRender(updateComponents) {
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
-
   }
   tick()
 }
@@ -1144,6 +1146,9 @@ function updateControlOnTick() {
   // if (controlType == 'orbit' && controls != null) {
   //   controls.update()
   // }
+}
+function updateStatsOnTick() {
+  stats.update();
 }
 function updateIntersectionsOnTick() {
   if (enableIntersectionsSelection) {
@@ -1222,7 +1227,8 @@ function prepareUIDebugger() {
 
 /** Priority: - 1 */
 prepareScene()
-renderToCanvas()
+prepareCanvas()
+prepareStats()
 
 /** Priority: - 2 */
 prepareCamera()
@@ -1230,20 +1236,20 @@ prepareObjects()
 prepareIntersections()
 prepareLight()
 prepareFloor()
-// prepareModels()
+prepareModels()
 // prepareAxesHelper()
 
 /** Priority: - 3 */
 // controlType = 'drag'
 prepareControls()
-let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, doubleClickListener, mouseDownListener, mouseUpListener]
+let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, mouseDownListener, mouseUpListener]
 prepareEventListeners(eventListenersList)
 // prepareShadow()
 // prepareCameraHelper()
 // prepareGroups()
 
 /** Priority: - 4 */
-let updateComponentsList = [updateControlOnTick, updateCameraOnTick, updateIntersectionsOnTick]
+let updateComponentsList = [updateControlOnTick, updateCameraOnTick, updateIntersectionsOnTick, updateStatsOnTick]
 prepareAnimationsAndRender(updateComponentsList)
 
 /** Priority: - 5 */
