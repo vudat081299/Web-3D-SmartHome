@@ -502,7 +502,7 @@ const canvas = document.querySelector('canvas.webgl')
 const frustumSize = 5000
 const sizes = () => {
   return {
-    width: window.innerWidth,
+    width: window.innerWidth - 15,
     height: window.innerHeight
   }
 }
@@ -555,7 +555,8 @@ const stats = new Stats(); // a performance viewer
  * --------------------------------------------------------------------------------------------------------------------------------------- */
 function prepareScene() {
   console.log("prepareScene");
-  scene.background = new THREE.Color('black');
+  // scene.background = new THREE.Color('clear');
+  scene.background = null;
 }
 
 
@@ -649,8 +650,8 @@ function prepareModels() {
   // gltfLoader.setDRACOLoader(dracoLoader)
 
   // ../models/Fox/glTF/Fox.gltf
-  gltfLoader.load('../textures/house.gltf', (gltf) => {
-    gltf.scene.scale.set(1, 1, 1)
+  gltfLoader.load('../textures/scene.gltf', (gltf) => {
+    gltf.scene.scale.set(0.005, 0.005, 0.005)
     scene.add(gltf.scene)
 
     // Animation - The block of code below load the animation of .gltf extension, this should be comment if the file was extracted without any animations.
@@ -668,7 +669,7 @@ function prepareModels() {
 function prepareFloor() {
   console.log("prepareFloor");
   const floor = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(10, 10),
+    new THREE.PlaneBufferGeometry(100, 100),
     new THREE.MeshStandardMaterial({
       color: '#ffffff',
       metalness: 0,
@@ -677,7 +678,7 @@ function prepareFloor() {
   )
   floor.receiveShadow = true
   floor.rotation.x = - Math.PI * 0.5
-  floor.position.y -= 1
+  floor.position.y -= 5
   scene.add(floor)
 }
 
@@ -801,31 +802,33 @@ function prepareLight() {
   const ambientLight = new THREE.AmbientLight()
   ambientLight.color = new THREE.Color(0xffffff)
   ambientLight.intensity = 0.5
+  ambientLight.position.set(10, 50, 100)
   scene.add(ambientLight)
 
   // Directional light
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
-  directionalLight.position.set(30, 50, 100)
+  directionalLight.position.set(15, 50, 100)
   scene.add(directionalLight)
 
   // Hemisphere light
   const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.3)
+  hemisphereLight.position.set(20, 50, 100)
   scene.add(hemisphereLight)
 
   // Point light
   const pointLight = new THREE.PointLight(0xffffff, 0.5, 10, 2)
-  pointLight.position.set(40, 50, 100)
+  pointLight.position.set(30, 50, 100)
   scene.add(pointLight)
 
   // Rect area light
   const rectAreaLight = new THREE.RectAreaLight(0xffffff, 2, 1, 1)
-  rectAreaLight.position.set(50, 50, 100)
+  rectAreaLight.position.set(35, 50, 100)
   rectAreaLight.lookAt(new THREE.Vector3())
   scene.add(rectAreaLight)
 
   // Spot light
-  const spotLight = new THREE.SpotLight(0xffffff, 0.5, 10, Math.PI * 0.1, 0.25, 1)
-  spotLight.position.set(60, 50, 100)
+  const spotLight = new THREE.SpotLight(0xaaaaff, 10, 100, Math.PI * 0.2, 0.25, 1)
+  spotLight.position.set(30, 30, 30)
   scene.add(spotLight)
 
   spotLight.target.position.x = - 0.75
@@ -988,11 +991,12 @@ function keyUpListener() {
 }
 function mouseDownListener() {
   window.addEventListener('mousedown', (event) => {
-    enableIntersectionsSelection = true
+    console.log("mouseDownListener");
   })
 }
 function mouseUpListener() {
   window.addEventListener('mouseup', (event) => {
+    console.log("mouseUpListener");
   })
 }
 function moveMouseListener() {
@@ -1024,32 +1028,39 @@ function doubleClickListener() {
 }
 function clickListener() {
   document.addEventListener('click', (event) => {
+    console.log("clickListener");
+    // Intersection
+    if (controlType == 'orbit') {
+      enableIntersectionsSelection = true
+    }
 
     // Support drag
-    event.preventDefault();
-    if (enableSelection === true) {
-      const draggableObjects = controls.getObjects();
-      draggableObjects.length = 0;
+    if (controlType == 'drag') {
+      event.preventDefault();
+      if (enableSelection === true) {
+        const draggableObjects = controls.getObjects();
+        draggableObjects.length = 0;
 
-      raycaster.setFromCamera(pointer, camera);
-      const intersections = raycaster.intersectObjects(objects, true);
+        raycaster.setFromCamera(pointer, camera);
+        const intersections = raycaster.intersectObjects(objects, true);
 
-      if (intersections.length > 0) {
-        const object = intersections[0].object;
-        if (group.children.includes(object) === true) {
-          object.material.emissive.set(0x000000);
-          scene.attach(object);
-        } else {
-          object.material.emissive.set(0x666666);
-          group.attach(object);
+        if (intersections.length > 0) {
+          const object = intersections[0].object;
+          if (group.children.includes(object) === true) {
+            object.material.emissive.set(0x000000);
+            scene.attach(object);
+          } else {
+            object.material.emissive.set(0x666666);
+            group.attach(object);
+          }
+          controls.transformGroup = true;
+          draggableObjects.push(group);
         }
-        controls.transformGroup = true;
-        draggableObjects.push(group);
-      }
 
-      if (group.children.length === 0) {
-        controls.transformGroup = false;
-        draggableObjects.push(...objects);
+        if (group.children.length === 0) {
+          controls.transformGroup = false;
+          draggableObjects.push(...objects);
+        }
       }
     }
   });
@@ -1241,7 +1252,7 @@ prepareModels()
 
 /** Priority: - 3 */
 // controlType = 'drag'
-prepareControls()
+// prepareControls()
 let eventListenersList = [resizeListener, moveMouseListener, clickListener, keyDownListener, keyUpListener, mouseDownListener, mouseUpListener]
 prepareEventListeners(eventListenersList)
 // prepareShadow()
